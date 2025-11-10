@@ -49,3 +49,47 @@ Four classification algorithms (Decision Tree, Random Forest, KNN, Neural Networ
 **Final Conclusion:** While popularity and quality are independent, a hotel's operational performance (its score) and its market engagement (its review volume) are **deeply intertwined** with its digital presence strategy.
 
 ## 📂 Project Structure
+analise-de-hoteis/
+
+│
+
+├── data/
+
+│   └── (.xlsx files)
+
+│
+
+├── docs/
+
+│   └── Relatório.docx
+|   └── Infográfico.pdf
+
+│
+
+├── notebooks/
+
+│   ├── 01_descriptive_analysis.ipynb
+
+│   ├── 02_regression_analysis.ipynb
+
+│   └── 03_machine_learning.ipynb
+
+│
+
+├── src/
+
+│   ├── init.py
+
+│   └── analysis.py (Data validation scripts)
+
+│
+
+└── README.md
+
+## 💻 Technologies Used
+
+* Python
+* Pandas & NumPy
+* Scikit-learn (for Regression, Clustering, and Classification models)
+* Matplotlib & Seaborn (for visualization)
+* Jupyter Notebooks
