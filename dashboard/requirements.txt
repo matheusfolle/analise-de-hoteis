@@ -1,3 +1,11 @@
+dash
+dash-bootstrap-components
+plotly
+pandas
+openpyxl
+dash_table
+scikit-learn
+gunicorn
 aext-assistant @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_d5fxz3l2ix/croot/aext-assistant_1746560160060/work
 aext-assistant-server @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_1emcn1_yt0/croot/aext-assistant-server_1746552985810/work
 aext-core @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_2eg8ig5bzd/croot/aext-core_1746546095117/work
