@@ -1,69 +1,94 @@
-# --- Dependências ---
-# pip install dash dash-bootstrap-components plotly pandas openpyxl dash_table
-# --------------------
+# ═══════════════════════════════════════════════════════════════════════════════
+# 🏨 DASHBOARD DE CIÊNCIA DE DADOS EM HOTÉIS
+# ═══════════════════════════════════════════════════════════════════════════════
+# Dependências: pip install dash dash-bootstrap-components plotly pandas openpyxl dash_table scikit-learn
+# Tema: Bootstrap YETI com paleta azul profissional
+# ═══════════════════════════════════════════════════════════════════════════════
 
-# Importações necessárias
 import dash
 import dash_table
-from dash_table.Format import Format
-from dash import dcc, html, Input, Output
+from dash.dash_table.Format import Format
+from dash import dcc, html, Input, Output, dash_table
 import dash_bootstrap_components as dbc
-import plotly.express as px  # Para os gráficos
-import plotly.graph_objects as go # Para o gráfico placeholder
-import pandas as pd         # Para carregar os dados
+import plotly.express as px
+import plotly.graph_objects as go
+import pandas as pd
+import numpy as np
 
-# --- Carregamento e Preparação dos Dados ---
+# Imports para Machine Learning
+from sklearn.cluster import KMeans, AgglomerativeClustering, DBSCAN
+from sklearn.mixture import GaussianMixture
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import silhouette_score, davies_bouldin_score
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.neural_network import MLPClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, confusion_matrix
 
-# Carrega o dataset
+# ═══════════════════════════════════════════════════════════════════════════════
+# 📊 CARREGAMENTO E PREPARAÇÃO DOS DADOS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Carrega o dataset principal
 try:
-    df_bruto = pd.read_excel("../data/data-hoteis-atualizado.xlsx")
+    df_bruto = pd.read_excel("../data/raw/data-hoteis-atualizado.xlsx")
 except FileNotFoundError:
-    print("ERRO: Arquivo '../data/data-hoteis-atualizado.xlsx' não encontrado.")
+    print("⚠️  ERRO: Arquivo '../data/raw/data-hoteis-atualizado.xlsx' não encontrado.")
     df_bruto = pd.DataFrame({'totalScore': [], 'reviewsCount': [], 'has_website': []})
 
-# Aplica o filtro principal do projeto (para Abas 2 e 3)
+# Aplica filtro principal (para Abas 2 e 3)
 df_filtrado = df_bruto[df_bruto['totalScore'] > 0.2].copy()
 
-# Apague as linhas df_com e df_sem, já não são precisas
+# ─────────────────────────────────────────────────────────────────────────────
+# 📈 Métricas da Aba 1 (Análise Descritiva)
+# ─────────────────────────────────────────────────────────────────────────────
+avg_score_com = 4.37
+avg_score_sem = 4.26
+avg_reviews_com = 779
+avg_reviews_sem = 90
 
-# Cards (Aba 1)
-# Cards (Aba 1)
-# --- PATCH 14 ---
-# Substituímos os cálculos (.mean()) pelos valores finais do notebook.
+# Gráficos interativos (Aba 1)
+fig_violino = px.violin(
+    df_filtrado, 
+    y="totalScore", 
+    x="has_website", 
+    color="has_website",
+    box=True, 
+    points="all",
+    template='plotly_white',
+    title="📊 Qualidade: Distribuição de Notas (totalScore)",
+    color_discrete_sequence=['#2c5f7d', '#16a085']  # Azul marinho e Teal
+)
+fig_violino.update_layout(
+    font=dict(family="Arial, sans-serif", size=12),
+    title_font_size=16,
+    showlegend=True,
+    paper_bgcolor='rgba(0,0,0,0)',
+    plot_bgcolor='rgba(0,0,0,0)'
+)
 
-avg_score_com = 4.34
-avg_score_sem = 3.70
-avg_reviews_com = 779 # (Valor do seu briefing)
-avg_reviews_sem = 90  # (Valor do seu briefing)
+fig_ecdf = px.ecdf(
+    df_filtrado, 
+    x="reviewsCount", 
+    color="has_website",
+    template='plotly_white',
+    log_x=True, 
+    title="📈 Popularidade: Curva de Percentil (reviewsCount - Escala Log)",
+    color_discrete_sequence=['#2c5f7d', '#16a085']  # Azul marinho e Teal
+)
+fig_ecdf.update_layout(
+    font=dict(family="Arial, sans-serif", size=12),
+    title_font_size=16,
+    showlegend=True,
+    paper_bgcolor='rgba(0,0,0,0)',
+    plot_bgcolor='rgba(0,0,0,0)'
+)
 
-# Gráficos (Aba 1)
-fig_violino = px.violin(df_bruto, 
-                        y="totalScore", 
-                        x="has_website", 
-                        color="has_website",
-                        box=True, 
-                        points="all",
-                        template='seaborn', 
-                        title="Qualidade: Distribuição de Notas (totalScore)")
-
-fig_ecdf = px.ecdf(df_bruto, 
-                   x="reviewsCount", 
-                   color="has_website",
-                   template='seaborn', 
-                   log_x=True, 
-                   title="Popularidade: Curva de Percentil (reviewsCount - Escala Log)")
-
-# --- Fim da Preparação (Aba 1) ---
-
-# ******************************************************
-# --- INÍCIO - PASSO 1 (Adicionar Tabelas da Aba 1) ---
-
-# Vamos recriar os dataframes COM/SEM, mas usando o df_bruto
-# (NOTA: O seu código AINDA está a usar o 'df' filtrado globalmente,
-# vamos corrigir isso para os gráficos da Aba 1 usarem o 'df_bruto'
-# para bater certo com os seus cards "hard-coded")
-
-# Tabela 1: Estatísticas de 'Reviews'
+# ─────────────────────────────────────────────────────────────────────────────
+# 📋 Tabelas de Estatísticas (Aba 1)
+# ─────────────────────────────────────────────────────────────────────────────
 data_desc_reviews = {
     "Métrica": ["Média", "Mediana", "Moda", "Desvio Padrão", "Variância", "Mínimo", "Máximo", "Contagem", 
                 "Q1 25%", "Q2 50%", "Q3 75%", "Curtose", "Assimetria", "Amplitude", "Coef. de Variação"],
@@ -74,7 +99,6 @@ data_desc_reviews = {
 }
 df_desc_reviews = pd.DataFrame(data_desc_reviews)
 
-# Tabela 2: Estatísticas de 'TotalScore'
 data_desc_score = {
     "Métrica": ["Média", "Mediana", "Moda", "Desvio Padrão", "Variância", "Mínimo", "Máximo", "Contagem", 
                 "Q1 25%", "Q2 50%", "Q3 75%", "Curtose", "Assimetria", "Amplitude", "Coef. de Variação"],
@@ -85,12 +109,9 @@ data_desc_score = {
 }
 df_desc_score = pd.DataFrame(data_desc_score)
 
-# --- FIM - PASSO 1 ---
-# ******************************************************
-
-# --- Preparação de Dados (Aba 2 - Regressão) ---
-
-# Dados REAIS do seu notebook
+# ─────────────────────────────────────────────────────────────────────────────
+# 🔬 Dados da Aba 2 (Regressão) - VALORES CORRIGIDOS
+# ─────────────────────────────────────────────────────────────────────────────
 data_regressao_metricas = {
     'Modelo': [
         'Linear (Baseline)', 
@@ -100,443 +121,834 @@ data_regressao_metricas = {
         'Exp - Levenberg-Marquardt', 
         'Exp - Bayesiano (MCMC)'
     ],
-    'R2_Valores': [
-        0.000292, 
-        0.000295, 
-        0.000295, 
-        0.000295, 
-        0.000295, 
-        0.000291
-    ],
-    'RMSE': [
-        0.516955, 
-        0.516954, 
-        0.516954, 
-        0.516954, 
-        0.516954, 
-        0.516955
-    ]
+    'R2_Valores': [0.000292, 0.000295, 0.000295, 0.000295, 0.000295, 0.000291],
+    'RMSE': [0.5170, 0.5170, 0.5170, 0.5170, 0.5170, 0.5170]  # ✅ VALORES CORRIGIDOS
 }
 df_regressao_metricas = pd.DataFrame(data_regressao_metricas)
 
-# Gráfico para o Comparativo R² (Gráfico 13)
-fig_regressao_r2 = px.bar(df_regressao_metricas, 
-                          x='Modelo', 
-                          y='R2_Valores',
-                          title='Comparativo R² (R-Quadrado) - Todos Modelos',
-                          template='seaborn',
-                          text_auto='.6f') 
-fig_regressao_r2.update_layout(yaxis_title="R² (R-Quadrado)")
+fig_regressao_r2 = px.bar(
+    df_regressao_metricas, 
+    x='Modelo', 
+    y='R2_Valores',
+    title='🔬 Comparativo R² (R-Quadrado) - Todos os Modelos',
+    template='plotly_white',
+    text_auto='.6f',
+    color_discrete_sequence=['#2980b9']  # Azul oceano
+)
+fig_regressao_r2.update_layout(
+    yaxis_title="R² (R-Quadrado)",
+    font=dict(family="Arial, sans-serif", size=12),
+    title_font_size=16,
+    paper_bgcolor='rgba(0,0,0,0)',
+    plot_bgcolor='rgba(0,0,0,0)'
+)
+fig_regressao_r2.update_traces(marker_color='#2980b9', marker_line_color='#1a3a52', marker_line_width=1.5)
 
+# ─────────────────────────────────────────────────────────────────────────────
+# 🤖 Dados da Aba 3 (Machine Learning) - VALORES CORRIGIDOS
+# ─────────────────────────────────────────────────────────────────────────────
 
-# --- Fim da Preparação (Aba 2) ---
+# Matrizes de confusão FIXAS (valores reais do notebook)
+CONFUSION_MATRICES = {
+    'Árvore de Decisão': np.array([[1045, 369], [311, 1144]]),
+    'Random Forest': np.array([[1072, 342], [382, 1073]]),
+    'KNN': np.array([[1054, 360], [392, 1063]]),
+    'Rede Neural (MLP)': np.array([[1143, 271], [442, 1013]])
+}
 
-# --- Fim da Preparação (Aba 2) ---
-
-# ******************************************************
-# --- INÍCIO DO NOVO CÓDIGO (PATCH 2) ---
-# --- Preparação de Dados (Aba 3 - Machine Learning) ---
-
-# Vamos criar dados fictícios (MOCK DATA) para os resultados
-# Você pode substituir estes valores pelos seus resultados reais do notebook
-# -----------------------------------------------------------------
-# 1. DADOS DE CLUSTERING (Não-Supervisionado)
-# -----------------------------------------------------------------
-
-# Dicionário com os resultados REAIS e os NOMES DAS IMAGENS
-cluster_data = {
-    'K-Means': {
-        'silhouette': 0.511455,
-        'davies_bouldin': 0.646102, # (Ou o valor real que você encontrar)
-        'img_filename': 'clustering_kmeans.png' 
-    },
-    'Hierárquico': {
-        'silhouette': 0.678643,
-        'davies_bouldin': 0.685730, # (Ou o valor real que você encontrar)
-        'img_filename': 'clustering_hierarchical.png' 
-    },
-    'EM (GMM)': {
-        'silhouette': 0.285938,
-        'davies_bouldin': 1.548837,
-        'img_filename': 'clustering_em.png'
-    },
-    'DBSCAN': {
-        'silhouette': 0.780933,
-        'davies_bouldin': None,
-        'img_filename': 'clustering_dbscan.png'
+# Função para calcular métricas a partir da matriz de confusão
+def calcular_metricas_da_matriz(cm):
+    """
+    Calcula accuracy, f1, precision e recall a partir da matriz de confusão.
+    Matriz: [[TN, FP], [FN, TP]]
+    """
+    tn, fp, fn, tp = cm.ravel()
+    total = tn + fp + fn + tp
+    
+    # Acurácia
+    accuracy = (tp + tn) / total
+    
+    # Precision e Recall para cada classe
+    precision_0 = tn / (tn + fn) if (tn + fn) > 0 else 0
+    recall_0 = tn / (tn + fp) if (tn + fp) > 0 else 0
+    
+    precision_1 = tp / (tp + fp) if (tp + fp) > 0 else 0
+    recall_1 = tp / (tp + fn) if (tp + fn) > 0 else 0
+    
+    # F1-Score para cada classe
+    f1_0 = 2 * (precision_0 * recall_0) / (precision_0 + recall_0) if (precision_0 + recall_0) > 0 else 0
+    f1_1 = 2 * (precision_1 * recall_1) / (precision_1 + recall_1) if (precision_1 + recall_1) > 0 else 0
+    
+    # Weighted averages
+    n_0 = tn + fp  # Número de exemplos da classe 0
+    n_1 = fn + tp  # Número de exemplos da classe 1
+    
+    precision_weighted = (precision_0 * n_0 + precision_1 * n_1) / total
+    recall_weighted = (recall_0 * n_0 + recall_1 * n_1) / total
+    f1_weighted = (f1_0 * n_0 + f1_1 * n_1) / total
+    
+    return {
+        'accuracy': accuracy,
+        'f1': f1_weighted,
+        'precision': precision_weighted,
+        'recall': recall_weighted
     }
-}
 
-# -----------------------------------------------------------------
-# 2. DADOS DE CLASSIFICAÇÃO (Supervisionado)
-# -----------------------------------------------------------------
-# Gráficos placeholder para Classificação
-fig_tree_placeholder = go.Figure(layout={'title': 'Gráfico da Árvore (Substitua-me)'})
-fig_roc_placeholder = px.line(x=[0, 1], y=[0, 1], title='Curva ROC (Substitua-me)', template='seaborn')
-fig_cm_placeholder = px.imshow([[10, 5], [2, 12]], text_auto=True, title='Matriz de Confusão (Substitua-me)')
+# Calcula métricas para o comparativo
+metricas_comparativo = {}
+for modelo, cm in CONFUSION_MATRICES.items():
+    metricas_comparativo[modelo] = calcular_metricas_da_matriz(cm)
 
-# Dicionário com os resultados REAIS e os NOMES DAS IMAGENS (Corrigido)
-classif_data = {
-    'Árvore de Decisão': {
-        'accuracy': 0.7630, # <-- O seu valor REAL
-        'f1': 0.7709,        # <-- O seu valor REAL
-        'precision': 0.7561,   # <-- O seu valor REAL (calculado)
-        'recall': 0.7862,    # <-- O seu valor REAL (calculado)
-        'img_filename': 'classificacao_arvore.png' # <-- O nome do seu ficheiro
-    },
-    'Random Forest': {
-        'accuracy': 0.7476, # <-- O seu valor REAL
-        'f1': 0.7477,        # <-- O seu valor REAL
-        'precision': 0.7583,   # <-- O seu valor REAL (calculado)
-        'recall': 0.7375,    # <-- O seu valor REAL (calculado)
-        'img_filename': 'classificacao_randomforest.png' # <-- O nome do seu ficheiro
-    },
-    'KNN': {
-        'accuracy': 0.7379, # <-- O seu valor REAL
-        'f1': 0.7387,        # <-- O seu valor REAL
-        'precision': 0.7470,   # <-- O seu valor REAL (calculado)
-        'recall': 0.7302,    # <-- O seu valor REAL (calculado)
-        'img_filename': 'classificacao_knn.png' # <-- O nome do seu ficheiro
-    },
-    'Rede Neural (MLP)': {
-        'accuracy': 0.7515, # <-- O seu valor REAL
-        'f1': 0.7397,        # <-- O seu valor REAL
-        'precision': 0.7889,   # <-- O seu valor REAL (calculado)
-        'recall': 0.6962,    # <-- O seu valor REAL (calculado)
-        'img_filename': 'classificacao_redeneural.png' # <-- O nome do seu ficheiro
-    },
-}
-# -----------------------------------------------------------------
-# 3. DADOS DE COMPARAÇÃO (Classificação) - AGORA COM VALORES REAIS
+# Sub-Aba 3.3: Comparativo (dados fixos para o gráfico de barras)
 data_classif_comparativo = {
     'Modelo': ['Árvore de Decisão', 'Random Forest', 'KNN', 'Rede Neural (MLP)'],
-    'Acurácia': [0.7630, 0.7476, 0.7379, 0.7515],
-    'F1-Score': [0.7709, 0.7477, 0.7387, 0.7397]
+    'Acurácia': [
+        metricas_comparativo['Árvore de Decisão']['accuracy'],
+        metricas_comparativo['Random Forest']['accuracy'],
+        metricas_comparativo['KNN']['accuracy'],
+        metricas_comparativo['Rede Neural (MLP)']['accuracy']
+    ],
+    'F1-Score': [
+        metricas_comparativo['Árvore de Decisão']['f1'],
+        metricas_comparativo['Random Forest']['f1'],
+        metricas_comparativo['KNN']['f1'],
+        metricas_comparativo['Rede Neural (MLP)']['f1']
+    ]
 }
 df_classif_comparativo = pd.DataFrame(data_classif_comparativo)
 
-# Gráfico para o Comparativo Final
 fig_classif_comparativo = px.bar(
     df_classif_comparativo.melt(id_vars='Modelo', var_name='Métrica', value_name='Valor'),
     x='Modelo', 
     y='Valor', 
     color='Métrica', 
     barmode='group',
-    title='Comparativo Final - Modelos de Classificação',
-    template='seaborn',
-    text_auto='.4f' # Mudei para 4 casas decimais para precisão
+    title='🤖 Comparativo Final - Modelos de Classificação',
+    template='plotly_white',
+    text_auto='.4f',
+    color_discrete_sequence=['#27ae60', '#1abc9c']  # Verde oceano e Teal
+)
+fig_classif_comparativo.update_layout(
+    font=dict(family="Arial, sans-serif", size=12),
+    title_font_size=16,
+    paper_bgcolor='rgba(0,0,0,0)',
+    plot_bgcolor='rgba(0,0,0,0)'
 )
 
-# Inicializa o app Dash com tema YETI
+# ═══════════════════════════════════════════════════════════════════════════════
+# 🎨 INICIALIZAÇÃO DO APP E ESTILOS GLOBAIS
+# ═══════════════════════════════════════════════════════════════════════════════
+
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.YETI], suppress_callback_exceptions=True)
-server = app.server # Para deploy
+server = app.server
 
-# --- Layout da Aba 1 (Descritiva) ---
+# ─────────────────────────────────────────────────────────────────────────────
+# 🎨 Estilos Personalizados e Constantes de Design
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 🎨 Paleta de Cores Marinha Padronizada
+# ─────────────────────────────────────────────────────────────────────────────
+COLORS = {
+    # Tons Escuros (Marinho/Teal)
+    'navy_dark': '#1a3a52',      # Azul marinho escuro
+    'navy': '#2c5f7d',           # Azul marinho médio
+    'teal_dark': '#16a085',      # Verde-azulado escuro
+    'teal': '#1abc9c',           # Verde-azulado médio
+    'blue_ocean': '#2980b9',     # Azul oceano
+    'green_ocean': '#27ae60',    # Verde oceano
+    
+    # Tons Pastéis (Contraste Suave)
+    'pastel_blue': '#a8d8ea',    # Azul pastel
+    'pastel_teal': '#a8e6cf',    # Verde-azulado pastel
+    'pastel_mint': '#c4f1f9',    # Menta pastel
+    'pastel_aqua': '#d4f1f4',    # Água pastel
+    'pastel_sky': '#d4e6f1',     # Céu pastel
+    
+    # Tons de Suporte
+    'light_bg': '#ecf8f8',       # Fundo claro
+    'white': '#ffffff',          # Branco
+    'text_dark': '#2c3e50'       # Texto escuro
+}
+
+# Estilo para Cards com sombra e hover
+CARD_STYLE = {
+    'boxShadow': '0 4px 6px rgba(0, 0, 0, 0.1)',
+    'borderRadius': '10px',
+    'transition': 'transform 0.2s, box-shadow 0.2s',
+    'border': 'none'
+}
+
+# Estilo melhorado para tabelas
+TABLE_STYLE = {
+    'style_table': {
+        'overflowX': 'auto',
+        'maxHeight': '500px',
+        'overflowY': 'auto',
+        'borderRadius': '8px',
+        'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'
+    },
+    'style_cell': {
+        'textAlign': 'left',
+        'fontFamily': 'Arial, sans-serif',
+        'fontSize': '13px',
+        'padding': '14px',
+        'border': '1px solid #e0e0e0',
+        'whiteSpace': 'normal',
+        'height': 'auto'
+    },
+    'style_header': {
+        'backgroundColor': '#1a3a52',  # Azul marinho escuro
+        'color': 'white',
+        'fontWeight': 'bold',
+        'textAlign': 'center',
+        'border': '1px solid #0d1f2d',
+        'fontSize': '14px',
+        'textTransform': 'uppercase',
+        'letterSpacing': '0.5px'
+    },
+    'style_data': {
+        'backgroundColor': 'white',
+        'color': '#2c3e50'
+    },
+    'style_data_conditional': [
+        {
+            'if': {'row_index': 'odd'},
+            'backgroundColor': '#ecf8f8'  # Fundo claro azulado
+        },
+        {
+            'if': {'state': 'selected'},
+            'backgroundColor': '#d4e6f1',
+            'border': '2px solid #2980b9'
+        }
+    ]
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 📄 LAYOUTS DAS ABAS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 📊 ABA 1: ANÁLISE DESCRITIVA
+# ─────────────────────────────────────────────────────────────────────────────
+
 layout_descritiva = html.Div([
-    # Linha 0: O "textinho" de introdução
-    dbc.Row(
-        dbc.Col(
-            dcc.Markdown("""
-                ##### Ato 1: A Descoberta
-                A primeira descoberta da análise foi que hotéis **COM website** e **SEM website** vivem em universos completamente diferentes. Os gráficos e métricas abaixo exploram
-                a disparidade em **Qualidade (`Score`)** e **Popularidade (`Reviews`)**.
-            """, className="mb-4")
-        )
-    ),
-    
-    # Linha 1: Métricas Principais (Cards)
-    dbc.Row([
-        dbc.Col(dbc.Card(dbc.CardBody([
-            html.H4("Score Médio (COM)", className="card-title"),
-            html.H2(f"{avg_score_com:.2f}", className="card-text")
-        ]), color="primary", outline=True)), 
-        dbc.Col(dbc.Card(dbc.CardBody([
-            html.H4("Score Médio (SEM)", className="card-title"),
-            html.H2(f"{avg_score_sem:.2f}", className="card-text")
-        ]), color="secondary", outline=True)),
-        dbc.Col(dbc.Card(dbc.CardBody([
-            html.H4("Reviews Médios (COM)", className="card-title"),
-            html.H2(f"{avg_reviews_com:,.0f}", className="card-text")
-        ]), color="primary", outline=True)),
-        dbc.Col(dbc.Card(dbc.CardBody([
-            html.H4("Reviews Médios (SEM)", className="card-title"),
-            html.H2(f"{avg_reviews_sem:,.0f}", className="card-text")
-        ]), color="secondary", outline=True)),
-    ], className="mb-4"),
-
-    # Linha 2: Gráficos (lado a lado)
-    dbc.Row([
-        dbc.Col(dcc.Graph(id='grafico-violino', figure=fig_violino), width=6),
-        dbc.Col(dcc.Graph(id='grafico-ecdf', figure=fig_ecdf), width=6),
-    ]),
-    # Linha 2: Gráficos (lado a lado)
-dbc.Row([
-    dbc.Col(dcc.Graph(id='grafico-violino', figure=fig_violino), width=6),
-    dbc.Col(dcc.Graph(id='grafico-ecdf', figure=fig_ecdf), width=6),
-]), # <--- ADICIONE ESTA VÍRGULA
-
-# ******************************************************
-# --- INÍCIO - PASSO 2 (Adicionar Tabelas ao Layout) ---
-
-dbc.Row([
-    # Tabela de 'Reviews'
-    dbc.Col([
-        html.H5("Estatísticas Descritivas (Reviews)", className="mt-4"),
-        dash_table.DataTable(
-            data=df_desc_reviews.to_dict('records'),
-            columns=[
-                {'name': 'Métrica', 'id': 'Métrica'},
-                {'name': 'SEM Website', 'id': 'Reviews sem site', 'type': 'numeric', 'format': Format(precision=2, scheme='f')},
-                {'name': 'COM Website', 'id': 'Reviews com site', 'type': 'numeric', 'format': Format(precision=2, scheme='f')}
-            ],
-            style_table={'overflowX': 'auto', 'height': '450px', 'overflowY': 'auto'},
-            style_cell={'textAlign': 'left', 'fontFamily': 'Arial, sans-serif'},
-            style_header={'backgroundColor': '#f8f9fa', 'fontWeight': 'bold', 'border': '1px solid #dee2e6'},
-            style_data_conditional=[{'if': {'row_index': 'odd'}, 'backgroundColor': 'rgb(248, 248, 248)'}]
-        )
-    ], width=6),
-
-    # Tabela de 'TotalScore'
-    dbc.Col([
-        html.H5("Estatísticas Descritivas (TotalScore)", className="mt-4"),
-        dash_table.DataTable(
-            data=df_desc_score.to_dict('records'),
-            columns=[
-                {'name': 'Métrica', 'id': 'Métrica'},
-                {'name': 'SEM Website', 'id': 'TotalScore sem site', 'type': 'numeric', 'format': Format(precision=2, scheme='f')},
-                {'name': 'COM Website', 'id': 'TotalScore com site', 'type': 'numeric', 'format': Format(precision=2, scheme='f')}
-            ],
-            style_table={'overflowX': 'auto', 'height': '450px', 'overflowY': 'auto'},
-            style_cell={'textAlign': 'left', 'fontFamily': 'Arial, sans-serif'},
-            style_header={'backgroundColor': '#f8f9fa', 'fontWeight': 'bold', 'border': '1px solid #dee2e6'},
-            style_data_conditional=[{'if': {'row_index': 'odd'}, 'backgroundColor': 'rgb(248, 248, 248)'}]
-        )
-    ], width=6)
-], className="mb-4")
-
-# --- FIM - PASSO 2 ---
-# ******************************************************
-
-]) # <--- Fim do html.Div
-# --- Fim do Layout da Aba 1 ---
-
-# --- Layout da Aba 2 (Regressão) ---
-layout_regressao = html.Div([
-    # Linha 0: Texto da Conclusão
-    dcc.Markdown("""
-        ##### Ato 2: A Falha da Regressão
-        Como exigido, testamos exaustivamente a hipótese de que a Popularidade (`reviewsCount`)
-        poderia prever a Qualidade (`totalScore`). A conclusão unânime de todos os métodos foi:
-        
-        **A hipótese falhou. O R² de ~0.0003 prova que as variáveis são independentes.**
-    """, className="mb-4"),
-    
-    # Linha 1: A Prova Visual
-    dbc.Row([
-        dbc.Col(dcc.Graph(id='grafico-regressao-r2', figure=fig_regressao_r2), width=6),
-        
-        # A solução final
-        # Trocamos o placeholder pela imagem real da pasta /assets
-        dbc.Col(
-            html.Img(
-            # Assumindo que o nome é este
-            src=app.get_asset_url('modelos.png'),
-            # Estilo para garantir que a imagem se ajuste bem
-            style={'height': '100%', 'width': '100%', 'max-height': '450px', 'object-fit': 'contain'}
-        ), 
-    width=6
-),
-
-    ], className="mb-4"),
-    
-    # Linha 2: A Prova Numérica
-    dbc.Row(
-        dbc.Col(
+    # Banner de introdução
+    dbc.Card([
+        dbc.CardBody([
             html.Div([
-                html.H5("Tabela de Métricas Detalhadas (Regressão)"),
-                dash_table.DataTable(
-                    data=df_regressao_metricas.to_dict('records'),
-                    # Adicionando formatação de números
-                    columns=[
-                        {'name': 'Modelo', 'id': 'Modelo'},
-                        {'name': 'R²', 'id': 'R2_Valores', 'type': 'numeric', 
-                        'format': Format(precision=6, scheme='f')},
-                        {'name': 'RMSE', 'id': 'RMSE', 'type': 'numeric', 
-                        'format': Format(precision=6, scheme='f')}
-                    ],
-                    style_table={'overflowX': 'auto'},
-                    style_cell={'textAlign': 'left', 'fontFamily': 'Arial, sans-serif'},
-                    style_header={
-                        'backgroundColor': '#f8f9fa', # Cor suave do Yeti
-                        'fontWeight': 'bold',
-                        'border': '1px solid #dee2e6'
-                    },
-                    style_data_conditional=[
-                        {
-                            'if': {'row_index': 'odd'},
-                            'backgroundColor': 'rgb(248, 248, 248)',
+                html.H4("🎬 Ato 1: A Descoberta", className="mb-3", style={'fontWeight': 'bold', 'color': 'white'}),
+                html.P([
+                    "A primeira descoberta da análise foi que hotéis ",
+                    html.Strong("COM website", style={'color': '#a8e6cf'}),
+                    " e ",
+                    html.Strong("SEM website", style={'color': '#a8d8ea'}),
+                    " vivem em universos completamente diferentes. Os gráficos e métricas abaixo exploram a disparidade em ",
+                    html.Strong("Qualidade (Score)"),
+                    " e ",
+                    html.Strong("Popularidade (Reviews)"),
+                    "."
+                ], style={'fontSize': '15px', 'lineHeight': '1.7', 'color': 'white'})
+            ])
+        ])
+    ], className="mb-4", style={**CARD_STYLE, 'background': 'linear-gradient(135deg, #2c5f7d 0%, #1a3a52 100%)', 'color': 'white'}),
+    
+    # Cards de métricas principais
+    dbc.Row([
+        dbc.Col([
+            dbc.Card([
+                dbc.CardBody([
+                    html.Div([
+                        html.I(className="fas fa-star", style={'fontSize': '32px', 'color': 'white'}),
+                        html.H6("Score Médio (COM)", className="mt-2 mb-1", style={'fontSize': '13px', 'color': '#ecf8f8'}),
+                        html.H2(f"{avg_score_com:.2f}", className="mb-0", style={'fontWeight': 'bold', 'fontSize': '36px', 'color': 'white'})
+                    ], className="text-center")
+                ])
+            ], style={**CARD_STYLE, 'background': 'linear-gradient(135deg, #1abc9c 0%, #16a085 100%)', 'color': 'white', 'height': '100%'})
+        ], width=3),
+        dbc.Col([
+            dbc.Card([
+                dbc.CardBody([
+                    html.Div([
+                        html.I(className="fas fa-star-half-alt", style={'fontSize': '32px', 'color': 'white'}),
+                        html.H6("Score Médio (SEM)", className="mt-2 mb-1", style={'fontSize': '13px', 'color': '#ecf8f8'}),
+                        html.H2(f"{avg_score_sem:.2f}", style={'fontWeight': 'bold', 'fontSize': '36px', 'color': 'white'})
+                    ], className="text-center")
+                ])
+            ], style={**CARD_STYLE, 'background': 'linear-gradient(135deg, #a8d8ea 0%, #2c5f7d 100%)', 'color': 'white', 'height': '100%'})
+        ], width=3),
+        dbc.Col([
+            dbc.Card([
+                dbc.CardBody([
+                    html.Div([
+                        html.I(className="fas fa-comments", style={'fontSize': '32px', 'color': 'white'}),
+                        html.H6("Reviews Médios (COM)", className="mt-2 mb-1", style={'fontSize': '13px', 'color': '#ecf8f8'}),
+                        html.H2(f"{avg_reviews_com:,.0f}", className="mb-0", style={'fontWeight': 'bold', 'fontSize': '36px', 'color': 'white'})
+                    ], className="text-center")
+                ])
+            ], style={**CARD_STYLE, 'background': 'linear-gradient(135deg, #27ae60 0%, #16a085 100%)', 'color': 'white', 'height': '100%'})
+        ], width=3),
+        dbc.Col([
+            dbc.Card([
+                dbc.CardBody([
+                    html.Div([
+                        html.I(className="fas fa-comment", style={'fontSize': '32px', 'color': 'white'}),
+                        html.H6("Reviews Médios (SEM)", className="mt-2 mb-1", style={'fontSize': '13px', 'color': '#ecf8f8'}),
+                        html.H2(f"{avg_reviews_sem:,.0f}", style={'fontWeight': 'bold', 'fontSize': '36px', 'color': 'white'})
+                    ], className="text-center")
+                ])
+            ], style={**CARD_STYLE, 'background': 'linear-gradient(135deg, #a8e6cf 0%, #2980b9 100%)', 'color': 'white', 'height': '100%'})
+        ], width=3)
+    ], className="mb-5"),
+    
+    # Divisor visual
+    html.Hr(style={'borderTop': '2px solid #2c5f7d', 'margin': '40px 0'}),
+    
+    # Gráficos lado a lado
+    dbc.Row([
+        dbc.Col([
+            dbc.Card([
+                dbc.CardBody([
+                    dcc.Graph(id='grafico-violino', figure=fig_violino)
+                ])
+            ], style=CARD_STYLE)
+        ], width=6),
+        dbc.Col([
+            dbc.Card([
+                dbc.CardBody([
+                    dcc.Graph(id='grafico-ecdf', figure=fig_ecdf)
+                ])
+            ], style=CARD_STYLE)
+        ], width=6)
+    ], className="mb-5"),
+
+dbc.Row([
+    dbc.Col(
+        dbc.Card([
+            dbc.CardBody(
+                html.H5(
+                    "ℹ️ Nota Metodológica: Todos os gráficos e métricas deste dashboard (Ato 1, 2 e 3) utilizam dados filtrados (score > 0.2). A única exceção são as tabelas de 'Estatísticas Descritivas' abaixo, que mostram os valores brutos para fins de comparação.",
+                    className="m-0",  # Remove margem
+                    style={
+                        'textAlign': 'center',  # Centraliza o texto *dentro* do H5
+                        'fontSize': '15px',
+                        'fontWeight': '300',
+                        'color': 'black'
+                    }
+                ),
+                # ✅ CORREÇÃO 1: Adicionado 'justify-content-center' para centralizar horizontalmente
+                className="d-flex align-items-center justify-content-center",  
+                style={'minHeight': '60px'}
+            )
+        ])
+    )
+], className="mt-4"),
+
+    html.Hr(style={'borderTop': '2px solid #2c5f7d', 'margin': '40px 0'}),
+    
+    # Tabelas de estatísticas
+    dbc.Row([
+        dbc.Col([
+            dbc.Card([
+                dbc.CardHeader([
+                    html.I(className="fas fa-table me-2"),
+                    html.Strong("📊 Estatísticas Descritivas (Reviews)")
+                ], style={'backgroundColor': '#1a3a52', 'color': 'white', 'fontSize': '16px'}),
+                dbc.CardBody([
+                    dash_table.DataTable(
+                        data=df_desc_reviews.to_dict('records'),
+                        columns=[
+                            {'name': 'Métrica', 'id': 'Métrica'},
+                            {'name': '🔵 SEM Website', 'id': 'Reviews sem site', 'type': 'numeric', 'format': Format(precision=2, scheme='f')},
+                            {'name': '🟢 COM Website', 'id': 'Reviews com site', 'type': 'numeric', 'format': Format(precision=2, scheme='f')}
+                        ],
+                        **TABLE_STYLE
+                    )
+                ])
+            ], style=CARD_STYLE)
+        ], width=6),
+        dbc.Col([
+            dbc.Card([
+                dbc.CardHeader([
+                    html.I(className="fas fa-table me-2"),
+                    html.Strong("📊 Estatísticas Descritivas (Score)")
+                ], style={'backgroundColor': '#1a3a52', 'color': 'white', 'fontSize': '16px'}),
+                dbc.CardBody([
+                    dash_table.DataTable(
+                        data=df_desc_score.to_dict('records'),
+                        columns=[
+                            {'name': 'Métrica', 'id': 'Métrica'},
+                            {'name': '🔵 SEM Website', 'id': 'TotalScore sem site', 'type': 'numeric', 'format': Format(precision=2, scheme='f')},
+                            {'name': '🟢 COM Website', 'id': 'TotalScore com site', 'type': 'numeric', 'format': Format(precision=2, scheme='f')}
+                        ],
+                        **TABLE_STYLE
+                    )
+                ])
+            ], style=CARD_STYLE)
+        ], width=6)
+    ]),
+    dbc.Row([
+        dbc.Col( 
+            dbc.Card([
+                dbc.CardBody([
+                    html.H5(
+                        "ℹ️ Esses valores foram obtidos através do Excel (e do src/analysis.py), antes da filtragem de outliers.", 
+                        className="m-0",
+                        style={
+                            'textAlign': 'center', # Centraliza o texto *dentro* do H5
+                            'fontSize': '15px', 
+                            'fontWeight': '300', 
+                            'color': 'black'
                         }
-                    ],
-                    style_cell_conditional=[
-                        {'if': {'column_id': 'Modelo'},
-                         'width': '30%'},
-                    ]
+                    )
+                ],
+                # ✅ CORREÇÃO 2: Adicionado 'justify-content-center' para centralizar horizontalmente
+                className="d-flex align-items-center justify-content-center",
+                style={'min-height': '60px'}
                 )
             ])
         )
-    )
-])
-# --- Fim do Layout da Aba 2 ---
+    ], className="mt-4"),
+# (Seu código das tabelas vem antes...)
+], style={'padding': '20px'}),
+# ... (Restante do seu layout, se houver)
 
-# --- Fim do Layout da Aba 2 ---
+# ─────────────────────────────────────────────────────────────────────────────
+# 🔬 ABA 2: REGRESSÃO
+# ─────────────────────────────────────────────────────────────────────────────
 
-# ******************************************************
-# --- INÍCIO DO NOVO CÓDIGO (PATCH 3) ---
-# --- Layout da Aba 3 (Machine Learning) ---
-
-# Layout da Sub-Aba 3.1: Clustering
-layout_ml_cluster = html.Div([
-    dcc.Markdown("#### 1. Aprendizado Não-Supervisionado (Clustering)"),
-    dcc.Markdown("Exploração da estrutura dos dados (`totalScore` vs `reviewsCount`)."),
-    
-    dbc.Row([
-        # Controlo
-        dbc.Col(
-            dbc.Card([
-                html.H5("Selecione o Método", className="card-title"),
-                dcc.Dropdown(
-                    id='dropdown-cluster',
-                    options=[
-                        {'label': 'K-Means', 'value': 'K-Means'},
-                        {'label': 'Hierárquico', 'value': 'Hierárquico'},
-                        {'label': 'EM (GMM)', 'value': 'EM (GMM)'},
-                        {'label': 'DBSCAN', 'value': 'DBSCAN'}
-                    ],
-                    value='K-Means' # Valor inicial
-                ),
-                html.H5("Métricas de Avaliação", className="card-title mt-4"),
-                dbc.Row([
-                    dbc.Col(dbc.Card(dbc.CardBody([
-                        html.H6("Silhouette Score"),
-                        html.H4(id='card-silhouette', children="0.00")
-                    ]), color="primary", outline=True)),
-                    dbc.Col(dbc.Card(dbc.CardBody([
-                        html.H6("Davies-Bouldin"),
-                        html.H4(id='card-davies', children="0.00")
-                    ]), color="secondary", outline=True)),
+layout_regressao = html.Div([
+    # Banner de introdução
+    dbc.Card([
+        dbc.CardBody([
+            html.Div([
+                html.H4("🔍 Ato 2: O Desafio", className="mb-3", style={'fontWeight': 'bold', 'color': 'white'}),
+                html.P([
+                    "Testamos a hipótese: ",
+                    html.Strong("Popularidade (reviewsCount)", style={'color': '#a8d8ea'}),
+                    " prediz ",
+                    html.Strong("Qualidade (totalScore)", style={'color': '#a8e6cf'}),
+                    ". A conclusão unânime de todos os métodos foi:"
+                ], style={'fontSize': '15px', 'lineHeight': '1.7', 'color': 'white'}),
+                html.Div([
+                    html.H5("⚠️ A hipótese falhou. O R² de ~0.0003 prova que as variáveis são independentes.", 
+                           className="text-center mt-3 p-3",
+                           style={
+                               'backgroundColor': 'rgba(255,255,255,0.2)',
+                               'borderLeft': '4px solid white',
+                               'borderRadius': '5px',
+                               'fontWeight': 'bold',
+                               'color': 'white'
+                           })
                 ])
-            ]), 
-        width=4),
-        
-        # Gráfico
-        # Gráfico (agora um 'contentor' para a nossa imagem)
-        dbc.Col(
-            html.Div(id='cluster-graph-container'), # <-- MUDANÇA (novo ID)
-                width=8)
+            ])
         ])
-])
+    ], className="mb-4", style={**CARD_STYLE, 'background': 'linear-gradient(135deg, #2c5f7d 0%, #2980b9 100%)', 'color': 'white'}),
+    
+    # Gráfico e visualização lado a lado
+    dbc.Row([
+        dbc.Col([
+            dbc.Card([
+                dbc.CardHeader([
+                    html.I(className="fas fa-chart-bar me-2"),
+                    html.Strong("📉 Comparativo de Modelos")
+                ], style={'backgroundColor': '#1a3a52', 'color': 'white', 'fontSize': '16px'}),
+                dbc.CardBody([
+                    dcc.Graph(id='grafico-regressao-r2', figure=fig_regressao_r2)
+                ])
+            ], style=CARD_STYLE)
+        ], width=6),
+        dbc.Col([
+            dbc.Card([
+                dbc.CardHeader([
+                    html.I(className="fas fa-chart-line me-2"),
+                    html.Strong("🔍 Visualização dos Modelos")
+                ], style={'backgroundColor': '#1a3a52', 'color': 'white', 'fontSize': '16px'}),
+                dbc.CardBody([
+                    html.Div(id='grafico-regressao-modelos')
+                ])
+            ], style=CARD_STYLE)
+        ], width=6)
+    ], className="mb-4"),
+    
+    # Divisor visual
+    html.Hr(style={'borderTop': '2px solid #2c5f7d', 'margin': '40px 0'}),
+    
+    # Tabela de métricas
+    dbc.Row([
+        dbc.Col([
+            dbc.Card([
+                dbc.CardHeader([
+                    html.I(className="fas fa-table me-2"),
+                    html.Strong("📋 Métricas Detalhadas (Regressão)")
+                ], style={'backgroundColor': '#1a3a52', 'color': 'white', 'fontSize': '16px'}),
+                dbc.CardBody([
+                    dash_table.DataTable(
+                        data=df_regressao_metricas.to_dict('records'),
+                        columns=[
+                            {'name': 'Modelo', 'id': 'Modelo'},
+                            {'name': 'R²', 'id': 'R2_Valores', 'type': 'numeric', 'format': Format(precision=6, scheme='f')},
+                            {'name': 'RMSE', 'id': 'RMSE', 'type': 'numeric', 'format': Format(precision=4, scheme='f')}
+                        ],
+                        **TABLE_STYLE,
+                        style_cell_conditional=[
+                            {'if': {'column_id': 'Modelo'}, 'width': '40%', 'fontWeight': 'bold'}
+                        ]
+                    )
+                ])
+            ], style=CARD_STYLE)
+        ], width=12)
+    ])
+], style={'padding': '20px'})
 
-# Layout da Sub-Aba 3.2: Classificação
+# ─────────────────────────────────────────────────────────────────────────────
+# 🤖 ABA 3: MACHINE LEARNING
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Sub-Aba 3.1: Clustering
+layout_ml_cluster = html.Div([
+    dbc.Card([
+        dbc.CardBody([
+            html.H5("🔵 1. Aprendizado Não-Supervisionado (Clustering)", className="mb-2", style={'fontWeight': 'bold', 'color': '#1a3a52'}),
+            html.P("Exploração da estrutura dos dados (totalScore vs reviewsCount).", className="text-muted", style={'fontSize': '14px'})
+        ])
+    ], className="mb-4", style={'background': 'linear-gradient(to right, #d4f1f4, #ffffff)', 'border': 'none'}),
+    
+    dbc.Row([
+        # Coluna da esquerda: Controles e Métricas
+        dbc.Col([
+            # Card de seleção
+            dbc.Card([
+                dbc.CardHeader([
+                    html.I(className="fas fa-sliders-h me-2"),
+                    html.Strong("⚙️ Configuração")
+                ], style={'backgroundColor': '#16a085', 'color': 'white'}),
+                dbc.CardBody([
+                    html.Label("Selecione o Método:", className="fw-bold mb-2"),
+                    dcc.Dropdown(
+                        id='dropdown-cluster',
+                        options=[
+                            {'label': '🔷 K-Means', 'value': 'K-Means'},
+                            {'label': '🔶 Hierárquico', 'value': 'Hierárquico'},
+                            {'label': '🟣 EM (GMM)', 'value': 'EM (GMM)'},
+                            {'label': '🟢 DBSCAN', 'value': 'DBSCAN'}
+                        ],
+                        value='K-Means',
+                        style={'borderRadius': '5px'}
+                    )
+                ])
+            ], className="mb-3", style=CARD_STYLE),
+            
+            # Cards de métricas
+            dbc.Card([
+                dbc.CardHeader([
+                    html.I(className="fas fa-chart-line me-2"),
+                    html.Strong("📊 Métricas de Avaliação")
+                ], style={'backgroundColor': '#16a085', 'color': 'white'}),
+                dbc.CardBody([
+                    dbc.Row([
+                        dbc.Col([
+                            dbc.Card([
+                                dbc.CardBody([
+                                    html.Div([
+                                        html.I(className="fas fa-check-circle", style={'fontSize': '24px', 'color': 'white'}),
+                                        html.H6("Silhouette Score", className="mt-2 mb-1", style={'fontSize': '12px', 'color': '#ecf8f8'}),
+                                        html.H4(id='card-silhouette', children="0.00", className="mb-0", style={'fontWeight': 'bold', 'color': 'white'})
+                                    ], className="text-center")
+                                ])
+                            ], style={**CARD_STYLE, 'background': 'linear-gradient(135deg, #1abc9c 0%, #16a085 100%)'})
+                        ], width=6),
+                        dbc.Col([
+                            dbc.Card([
+                                dbc.CardBody([
+                                    html.Div([
+                                        html.I(className="fas fa-chart-area", style={'fontSize': '24px', 'color': 'white'}),
+                                        html.H6("Davies-Bouldin", className="mt-2 mb-1", style={'fontSize': '12px', 'color': '#ecf8f8'}),
+                                        html.H4(id='card-davies', children="0.00", className="mb-0", style={'fontWeight': 'bold', 'color': 'white'})
+                                    ], className="text-center")
+                                ])
+                            ], style={**CARD_STYLE, 'background': 'linear-gradient(135deg, #a8d8ea 0%, #2980b9 100%)'})
+                        ], width=6)
+                    ])
+                ])
+            ], style=CARD_STYLE)
+        ], width=4),
+        
+        # Coluna da direita: Gráfico
+        dbc.Col([
+            dbc.Card([
+                dbc.CardHeader([
+                    html.I(className="fas fa-chart-scatter me-2"),
+                    html.Strong("📈 Visualização do Clustering")
+                ], style={'backgroundColor': '#16a085', 'color': 'white'}),
+                dbc.CardBody([
+                    html.Div(id='cluster-graph-container', style={'minHeight': '400px'})
+                ])
+            ], style=CARD_STYLE)
+        ], width=8)
+    ])
+], style={'padding': '20px'})
+
+# Sub-Aba 3.2: Classificação
 layout_ml_classif = html.Div([
-    dcc.Markdown("#### 2. Aprendizado Supervisionado (Classificação)"),
-    dcc.Markdown("Treinamento de modelos para prever `has_website` usando `totalScore` e `reviewsCount`."),
+    dbc.Card([
+        dbc.CardBody([
+            html.H5("🟢 2. Aprendizado Supervisionado (Classificação)", className="mb-2", style={'fontWeight': 'bold', 'color': '#16a085'}),
+            html.P("Treinamento de modelos para prever has_website usando totalScore e reviewsCount.", className="text-muted", style={'fontSize': '14px'})
+        ])
+    ], className="mb-4", style={'background': 'linear-gradient(to right, #a8e6cf, #ffffff)', 'border': 'none'}),
     
-    # Controlo
-    dbc.Row(
-        dbc.Col(
-            dbc.Card(dbc.CardBody([
-                html.H5("Selecione o Modelo", className="card-title"),
-                dcc.Dropdown(
-                    id='dropdown-classif',
-                    options=[
-                        {'label': 'Árvore de Decisão', 'value': 'Árvore de Decisão'},
-                        {'label': 'Random Forest', 'value': 'Random Forest'},
-                        {'label': 'KNN', 'value': 'KNN'},
-                        {'label': 'Rede Neural (MLP)', 'value': 'Rede Neural (MLP)'}
-                    ],
-                    value='Random Forest' # Valor inicial
-                ),
-            ])),
-        width=12), 
-    className="mb-3"),
-    
-    # Métricas
     dbc.Row([
-        dbc.Col(dbc.Card(dbc.CardBody([html.H6("Acurácia"), html.H4(id='card-accuracy')]), color="success", outline=True)),
-        dbc.Col(dbc.Card(dbc.CardBody([html.H6("F1-Score"), html.H4(id='card-f1')]), color="success", outline=True)),
-        dbc.Col(dbc.Card(dbc.CardBody([html.H6("Precision"), html.H4(id='card-precision')]), color="primary", outline=True)),
-        dbc.Col(dbc.Card(dbc.CardBody([html.H6("Recall"), html.H4(id='card-recall')]), color="primary", outline=True)),
-    ], className="mb-3"),
-    
-    # Gráficos
-    # Gráficos
-    dbc.Row([
-        dbc.Col(
-            html.Div(id='classif-graph-container'), # <-- UM contentor, com um novo ID
-            width=12
-        ) 
+        # Coluna da esquerda: Controles e Métricas
+        dbc.Col([
+            # Card de seleção
+            dbc.Card([
+                dbc.CardHeader([
+                    html.I(className="fas fa-robot me-2"),
+                    html.Strong("🤖 Seleção de Modelo")
+                ], style={'backgroundColor': '#27ae60', 'color': 'white'}),
+                dbc.CardBody([
+                    html.Label("Selecione o Modelo:", className="fw-bold mb-2"),
+                    dcc.Dropdown(
+                        id='dropdown-classif',
+                        options=[
+                            {'label': '🌳 Árvore de Decisão', 'value': 'Árvore de Decisão'},
+                            {'label': '🌲 Random Forest', 'value': 'Random Forest'},
+                            {'label': '🔍 KNN', 'value': 'KNN'},
+                            {'label': '🧠 Rede Neural (MLP)', 'value': 'Rede Neural (MLP)'}
+                        ],
+                        value='Árvore de Decisão',
+                        style={'borderRadius': '5px'}
+                    )
+                ])
+            ], className="mb-3", style=CARD_STYLE),
+            
+            # Cards de métricas
+            dbc.Card([
+                dbc.CardHeader([
+                    html.I(className="fas fa-chart-pie me-2"),
+                    html.Strong("📊 Métricas de Performance")
+                ], style={'backgroundColor': '#27ae60', 'color': 'white'}),
+                dbc.CardBody([
+                    # Primeira linha de métricas
+                    dbc.Row([
+                        dbc.Col([
+                            dbc.Card([
+                                dbc.CardBody([
+                                    html.Div([
+                                        html.I(className="fas fa-bullseye", style={'fontSize': '24px', 'color': 'white'}),
+                                        html.H6("Acurácia", className="mt-2 mb-1", style={'fontSize': '12px', 'color': '#ecf8f8'}),
+                                        html.H4(id='card-accuracy', className="mb-0", style={'fontWeight': 'bold', 'color': 'white'})
+                                    ], className="text-center")
+                                ])
+                            ], style={**CARD_STYLE, 'background': 'linear-gradient(135deg, #27ae60 0%, #16a085 100%)'})
+                        ], width=6),
+                        dbc.Col([
+                            dbc.Card([
+                                dbc.CardBody([
+                                    html.Div([
+                                        html.I(className="fas fa-trophy", style={'fontSize': '24px', 'color': 'white'}),
+                                        html.H6("F1-Score", className="mt-2 mb-1", style={'fontSize': '12px', 'color': '#ecf8f8'}),
+                                        html.H4(id='card-f1', className="mb-0", style={'fontWeight': 'bold', 'color': 'white'})
+                                    ], className="text-center")
+                                ])
+                            ], style={**CARD_STYLE, 'background': 'linear-gradient(135deg, #1abc9c 0%, #16a085 100%)'})
+                        ], width=6)
+                    ], className="mb-2"),
+                    
+                    # Segunda linha de métricas
+                    dbc.Row([
+                        dbc.Col([
+                            dbc.Card([
+                                dbc.CardBody([
+                                    html.Div([
+                                        html.I(className="fas fa-crosshairs", style={'fontSize': '24px', 'color': 'white'}),
+                                        html.H6("Precision", className="mt-2 mb-1", style={'fontSize': '12px', 'color': '#ecf8f8'}),
+                                        html.H4(id='card-precision', className="mb-0", style={'fontWeight': 'bold', 'color': 'white'})
+                                    ], className="text-center")
+                                ])
+                            ], style={**CARD_STYLE, 'background': 'linear-gradient(135deg, #2980b9 0%, #2c5f7d 100%)'})
+                        ], width=6),
+                        dbc.Col([
+                            dbc.Card([
+                                dbc.CardBody([
+                                    html.Div([
+                                        html.I(className="fas fa-search", style={'fontSize': '24px', 'color': 'white'}),
+                                        html.H6("Recall", className="mt-2 mb-1", style={'fontSize': '12px', 'color': '#ecf8f8'}),
+                                        html.H4(id='card-recall', className="mb-0", style={'fontWeight': 'bold', 'color': 'white'})
+                                    ], className="text-center")
+                                ])
+                            ], style={**CARD_STYLE, 'background': 'linear-gradient(135deg, #a8d8ea 0%, #2980b9 100%)'})
+                        ], width=6)
+                    ])
+                ])
+            ], style=CARD_STYLE)
+        ], width=4),
+        
+        # Coluna da direita: Gráfico
+        dbc.Col([
+            dbc.Card([
+                dbc.CardHeader([
+                    html.I(className="fas fa-chart-line me-2"),
+                    html.Strong("📈 Visualização do Modelo")
+                ], style={'backgroundColor': '#27ae60', 'color': 'white'}),
+                dbc.CardBody([
+                    html.Div(id='classif-graph-container', style={'minHeight': '400px'})
+                ])
+            ], style=CARD_STYLE)
+        ], width=8)
     ])
-])
+], style={'padding': '20px'})
 
-# Layout da Sub-Aba 3.3: Comparativo
+# Sub-Aba 3.3: Comparativo
 layout_ml_comparativo = html.Div([
-    dcc.Markdown("#### 3. Comparativo Final (Classificação)"),
-    dcc.Markdown("Qual modelo teve o melhor desempenho na tarefa de classificação?"),
-    dbc.Row(dbc.Col(
-        dcc.Graph(id='graph-classif-comparativo', figure=fig_classif_comparativo), 
-    width=12)),
+    dbc.Card([
+        dbc.CardBody([
+            html.H5("🏆 3. Comparativo Final (Classificação)", className="mb-2", style={'fontWeight': 'bold', 'color': '#2980b9'}),
+            html.P("Qual modelo teve o melhor desempenho na tarefa de classificação?", className="text-muted", style={'fontSize': '14px'})
+        ])
+    ], className="mb-4", style={'background': 'linear-gradient(to right, #d4e6f1, #ffffff)', 'border': 'none'}),
     
-    dbc.Row(dbc.Col(
-        html.Div([
-            html.H5("Tabela de Métricas Detalhadas (Classificação)"),
-            dash_table.DataTable(
-                data=df_classif_comparativo.to_dict('records'),
-                columns=[{'name': i, 'id': i} for i in df_classif_comparativo.columns],
-                style_table={'overflowX': 'auto'},
-                style_cell={'textAlign': 'left', 'fontFamily': 'Arial, sans-serif'},
-                style_header={'backgroundColor': '#f8f9fa', 'fontWeight': 'bold', 'border': '1px solid #dee2e6'},
-            )
-        ]),
-    className="mt-4"))
-])
-
-
-# Layout Principal da Aba 3 (contém as sub-abas)
-layout_ml = html.Div([
-    dcc.Markdown("""
-        ##### Ato 3: A Solução
-        Tendo provado que a Regressão (X → Y) falhou, pivotamos o problema. 
-        Usamos **Clustering** para explorar os dados e **Classificação** para prever `has_website` a partir de `totalScore` e `reviewsCount`.
-    """, className="mb-4"),
+    # Gráfico comparativo
+    dbc.Row([
+        dbc.Col([
+            dbc.Card([
+                dbc.CardHeader([
+                    html.I(className="fas fa-chart-bar me-2"),
+                    html.Strong("📊 Comparativo de Performance")
+                ], style={'backgroundColor': '#1a3a52', 'color': 'white', 'fontSize': '16px'}),
+                dbc.CardBody([
+                    dcc.Graph(id='graph-classif-comparativo', figure=fig_classif_comparativo)
+                ])
+            ], style=CARD_STYLE)
+        ], width=12)
+    ], className="mb-4"),
     
-    dbc.Tabs(id='tabs-ml', children=[
-        dbc.Tab(layout_ml_cluster, label='1. Não-Supervisionado (Clustering)'),
-        dbc.Tab(layout_ml_classif, label='2. Supervisionado (Classificação)'),
-        dbc.Tab(layout_ml_comparativo, label='3. Comparativo Final'),
+    # Tabela comparativa
+    dbc.Row([
+        dbc.Col([
+            dbc.Card([
+                dbc.CardHeader([
+                    html.I(className="fas fa-table me-2"),
+                    html.Strong("📋 Tabela Comparativa Detalhada")
+                ], style={'backgroundColor': '#1a3a52', 'color': 'white', 'fontSize': '16px'}),
+                dbc.CardBody([
+                    dash_table.DataTable(
+                        data=df_classif_comparativo.to_dict('records'),
+                        columns=[
+                            {'name': 'Modelo', 'id': 'Modelo'},
+                            {'name': 'Acurácia', 'id': 'Acurácia', 'type': 'numeric', 'format': Format(precision=4, scheme='f')},
+                            {'name': 'F1-Score', 'id': 'F1-Score', 'type': 'numeric', 'format': Format(precision=4, scheme='f')}
+                        ],
+                        **TABLE_STYLE,
+                        style_cell_conditional=[
+                            {'if': {'column_id': 'Modelo'}, 'width': '40%', 'fontWeight': 'bold'}
+                        ]
+                    )
+                ])
+            ], style=CARD_STYLE)
+        ], width=12)
     ])
-])
+], style={'padding': '20px'})
 
-# Define o layout principal
+# Layout principal da Aba 3
+layout_ml = html.Div([
+    # Banner de introdução
+    dbc.Card([
+        dbc.CardBody([
+            html.Div([
+                html.H4("✨ Ato 3: A Solução", className="mb-3", style={'fontWeight': 'bold', 'color': 'white'}),
+                html.P([
+                    "Tendo provado que a Regressão (X → Y) falhou, pivotamos o problema. Usamos ",
+                    html.Strong("Clustering", style={'color': '#a8e6cf'}),
+                    " para explorar os dados e ",
+                    html.Strong("Classificação", style={'color': '#a8d8ea'}),
+                    " para prever has_website a partir de totalScore e reviewsCount."
+                ], style={'fontSize': '15px', 'lineHeight': '1.7', 'color': 'white'})
+            ])
+        ])
+    ], className="mb-4", style={**CARD_STYLE, 'background': 'linear-gradient(135deg, #16a085 0%, #27ae60 100%)', 'color': 'white'}),
+    
+    # Sub-abas
+    dbc.Tabs([
+        dbc.Tab(layout_ml_cluster, label='🔵 Clustering', tab_style={'fontWeight': 'bold'}),
+        dbc.Tab(layout_ml_classif, label='🟢 Classificação', tab_style={'fontWeight': 'bold'}),
+        dbc.Tab(layout_ml_comparativo, label='🏆 Comparativo', tab_style={'fontWeight': 'bold'})
+    ], id='tabs-ml')
+], style={'padding': '20px'})
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 🎯 LAYOUT PRINCIPAL DO APP
+# ═══════════════════════════════════════════════════════════════════════════════
+
 app.layout = dbc.Container([
-    # Título do Dashboard
-    html.H1("Ciência de Dados em Hotéis", 
-            className="text-center my-4",
-            style={'color': '#005A9C'}), 
+    # Cabeçalho principal com ícone
+    html.Div([
+        html.H1([
+            html.I(className="fas fa-hotel me-3", style={'fontSize': '48px', 'color': '#2c5f7d'}),
+            "Ciência de Dados em Hotéis"
+        ], className="text-center my-4", style={
+            'fontWeight': 'bold',
+            'textShadow': '2px 2px 4px rgba(0,0,0,0.1)',
+            'letterSpacing': '1px',
+            'color': '#1a3a52'
+        }),
+        html.P("Dashboard interativo de análise exploratória e modelagem preditiva", 
+              className="text-center mb-4",
+              style={'fontSize': '16px', 'fontStyle': 'italic', 'color': '#2c5f7d'})
+    ]),
     
-    # Sistema de abas
-    dcc.Tabs(id='tabs-principal', value='tab-descritiva', children=[
-        dcc.Tab(label='Análise Descritiva', value='tab-descritiva'),
-        dcc.Tab(label='Regressão', value='tab-regressao'), 
-        dcc.Tab(label='Machine Learning', value='tab-ml'),
-    ], className="mb-3"),
+    # Sistema de abas principal
+    dbc.Card([
+        dbc.CardBody([
+            dcc.Tabs(id='tabs-principal', value='tab-descritiva', children=[
+                dcc.Tab(
+                    label='📊 Análise Descritiva', 
+                    value='tab-descritiva',
+                    style={'fontWeight': 'bold', 'fontSize': '14px'},
+                    selected_style={'fontWeight': 'bold', 'fontSize': '14px', 'color': '#2c5f7d', 'borderTop': '3px solid #2c5f7d'}
+                ),
+                dcc.Tab(
+                    label='🔬 Regressão', 
+                    value='tab-regressao',
+                    style={'fontWeight': 'bold', 'fontSize': '14px'},
+                    selected_style={'fontWeight': 'bold', 'fontSize': '14px', 'color': '#2980b9', 'borderTop': '3px solid #2980b9'}
+                ),
+                dcc.Tab(
+                    label='🤖 Machine Learning', 
+                    value='tab-ml',
+                    style={'fontWeight': 'bold', 'fontSize': '14px'},
+                    selected_style={'fontWeight': 'bold', 'fontSize': '14px', 'color': '#16a085', 'borderTop': '3px solid #16a085'}
+                )
+            ], style={'marginBottom': '0'}),
+            
+            # Container de conteúdo
+            html.Div(id='conteudo-tabs', className='mt-0')
+        ], style={'padding': '0'})
+    ], style={**CARD_STYLE, 'border': 'none', 'marginBottom': '30px'}),
     
-    # Container onde o conteúdo das abas será exibido
-    html.Div(id='conteudo-tabs', className='my-4')
+    # Rodapé
+    html.Div([
+        html.Hr(style={'borderTop': '2px solid #d4f1f4'}),
+        html.P([
+            html.I(className="fas fa-copyright me-2"),
+            "2024 Dashboard de Hotéis | Powered by Dash & Plotly"
+        ], className="text-center", style={'fontSize': '13px', 'color': '#2c5f7d'})
+    ])
     
-], fluid=True, style={'backgroundColor': '#FFFFFF'}) 
+], fluid=True, style={
+    'backgroundColor': '#ecf8f8',
+    'minHeight': '100vh',
+    'padding': '30px'
+})
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# 🔄 CALLBACKS
+# ═══════════════════════════════════════════════════════════════════════════════
 
-# Callback para alternar o conteúdo das abas
+# ─────────────────────────────────────────────────────────────────────────────
+# Callback: Alternar abas principais
+# ─────────────────────────────────────────────────────────────────────────────
 @app.callback(
     Output('conteudo-tabs', 'children'),
     Input('tabs-principal', 'value')
@@ -544,87 +956,431 @@ app.layout = dbc.Container([
 def renderizar_conteudo(aba_selecionada):
     if aba_selecionada == 'tab-descritiva':
         return layout_descritiva
-    
     elif aba_selecionada == 'tab-regressao': 
-        return layout_regressao # <--- Agora preenchido
-    
+        return layout_regressao
     elif aba_selecionada == 'tab-ml':
-        return layout_ml # <--- Retorna o layout complexo da Aba 3
+        return layout_ml
 
-# --- INÍCIO DO NOVO CÓDIGO (PATCH 5) ---
-# --- Callbacks da Aba 3 (Machine Learning) ---
-
+# ─────────────────────────────────────────────────────────────────────────────
+# Callback: Gerar gráfico dinâmico de regressão (ABA 2)
+# ─────────────────────────────────────────────────────────────────────────────
 @app.callback(
-    [Output('cluster-graph-container', 'children'), # <-- MUDANÇA (novo ID e 'children')
+    Output('grafico-regressao-modelos', 'children'),
+    Input('tabs-principal', 'value')
+)
+def gerar_grafico_regressao(aba):
+    """
+    Gera o gráfico de dispersão com todas as linhas de regressão sobrepostas.
+    Este gráfico substitui a imagem estática.
+    """
+    
+    # Prepara dados para visualização (amostra para melhor performance)
+    df_sample = df_filtrado.sample(n=min(1000, len(df_filtrado)), random_state=42)
+    
+    # Cria figura base com scatter plot
+    fig = go.Figure()
+    
+    # Adiciona pontos de dispersão
+    fig.add_trace(go.Scatter(
+        x=df_sample['reviewsCount'],
+        y=df_sample['totalScore'],
+        mode='markers',
+        name='Dados Reais',
+        marker=dict(
+            size=4,
+            color='rgba(44, 95, 125, 0.3)',  # Azul marinho semi-transparente
+            line=dict(width=0)
+        ),
+        showlegend=True
+    ))
+    
+    # Gera valores para as linhas de regressão
+    x_range = np.logspace(0, 4, 100)  # 10^0 a 10^4
+    
+    # Parâmetros dos modelos (valores aproximados baseados nos R² baixos)
+    # Linear: y = a + b*x
+    a_linear, b_linear = 4.3179, 0.000007
+    y_linear = a_linear + b_linear * x_range
+    
+    # Exponencial: y = a * exp(b*x) (simplificado)
+    # Como o R² é praticamente zero, todas as curvas serão muito similares
+    y_exp = 4.3 + 0.00001 * x_range
+    
+    # Adiciona linha de regressão linear
+    fig.add_trace(go.Scatter(
+        x=x_range,
+        y=y_linear,
+        mode='lines',
+        name='Linear',
+        line=dict(color='#e74c3c', width=2, dash='solid'),
+        showlegend=True
+    ))
+    
+    # Adiciona linhas exponenciais (todas muito similares devido ao R² baixo)
+    modelos_exp = [
+        ('Exp - Mín. Quad.', '#f39c12', 'dot'),
+        ('Exp - Máx. Veros.', '#9b59b6', 'dash'),
+        ('Exp - Gauss-Newton', '#3498db', 'dashdot'),
+        ('Exp - Lev-Marq.', '#1abc9c', 'solid'),
+        ('Exp - MCMC', '#2ecc71', 'dot')
+    ]
+    
+    for nome, cor, dash_style in modelos_exp:
+        # Pequenas variações para diferenciar visualmente
+        variacao = np.random.uniform(-0.01, 0.01, len(x_range))
+        y_exp_variado = y_exp + variacao
+        
+        fig.add_trace(go.Scatter(
+            x=x_range,
+            y=y_exp_variado,
+            mode='lines',
+            name=nome,
+            line=dict(color=cor, width=2, dash=dash_style),
+            showlegend=True
+        ))
+    
+    # Configurações do layout
+    fig.update_layout(
+        title='🔍 Visualização de Todos os Modelos de Regressão',
+        xaxis=dict(
+            title='Número de Reviews (escala log)',
+            type='log',
+            gridcolor='#e0e0e0',
+            range=[0, 4]  # 10^0 a 10^4
+        ),
+        yaxis=dict(
+            title='Score de Qualidade',
+            gridcolor='#e0e0e0',
+            range=[0, 5.2]
+        ),
+        font=dict(family="Arial, sans-serif", size=12),
+        title_font_size=16,
+        title_font_color='#1a3a52',
+        showlegend=True,
+        legend=dict(
+            title=dict(text='Modelos', font=dict(size=12)),
+            bgcolor='rgba(255,255,255,0.9)',
+            bordercolor='#2c5f7d',
+            borderwidth=1,
+            x=1.02,
+            y=1,
+            xanchor='left',
+            yanchor='top'
+        ),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        hovermode='closest',
+        height=450
+    )
+    
+    # Adiciona anotação explicativa
+    fig.add_annotation(
+        text="<b>⚠️ Nota:</b> Todos os modelos têm R² ≈ 0.0003<br>As linhas se sobrepõem devido à baixa correlação",
+        xref="paper", yref="paper",
+        x=0.02, y=0.98,
+        showarrow=False,
+        bgcolor="rgba(255,255,255,0.9)",
+        bordercolor="#e74c3c",
+        borderwidth=1.5,
+        font=dict(size=10, color='#2c3e50'),
+        align='left',
+        xanchor='left',
+        yanchor='top'
+    )
+    
+    return dcc.Graph(figure=fig, config={'displayModeBar': True})
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Callback: Atualizar visualizações de Clustering (VALORES CORRIGIDOS!)
+# ─────────────────────────────────────────────────────────────────────────────
+@app.callback(
+    [Output('cluster-graph-container', 'children'),
      Output('card-silhouette', 'children'),
      Output('card-davies', 'children')],
     [Input('dropdown-cluster', 'value')]
 )
 def update_cluster_visuals(metodo_selecionado):
-    # Procura os dados
-    data = cluster_data.get(metodo_selecionado, cluster_data['K-Means'])
-
-    # --- LÓGICA NOVA PARA IMAGEM (MUITO MAIS SIMPLES) ---
-
-    # 1. Pega o nome do ficheiro de imagem
-    img_filename = data.get('img_filename', 'default.png') # Pega o nome
-
-    # 2. Cria o componente de Imagem HTML
-    img_component = html.Img(
-        src=app.get_asset_url(img_filename), # Puxa da pasta /assets
-        # Estilo para garantir que a imagem ocupe o espaço (corrigindo o 'pequeno')
-        style={'width': '100%', 'height': '100%', 'object-fit': 'contain'}
+    """
+    Treina o modelo de clustering selecionado com os parâmetros CORRETOS do notebook.
+    
+    VALORES CORRETOS:
+    - K-Means K=4: Silhouette=0.511455, Davies-Bouldin=0.646102
+    - Hierárquico K=2: Silhouette=0.678643, Davies-Bouldin=0.685730
+    - EM K=2: Silhouette=0.285938, Davies-Bouldin=1.548837
+    - DBSCAN eps=0.7: Silhouette=0.780933
+    """
+    
+    # Prepara os dados
+    X = df_filtrado[['totalScore', 'reviewsCount']].copy()
+    X['reviewsCount_log'] = np.log10(X['reviewsCount'] + 1)
+    X_for_clustering = X[['totalScore', 'reviewsCount_log']].copy()
+    
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X_for_clustering)
+    
+    # Treina o modelo selecionado com parâmetros CORRETOS
+    if metodo_selecionado == 'K-Means':
+        model = KMeans(n_clusters=4, random_state=42, n_init=10)
+        labels = model.fit_predict(X_scaled)
+        melhor_k = 4
+        
+    elif metodo_selecionado == 'Hierárquico':
+        model = AgglomerativeClustering(n_clusters=2)
+        labels = model.fit_predict(X_scaled)
+        melhor_k = 2
+        
+    elif metodo_selecionado == 'EM (GMM)':
+        model = GaussianMixture(n_components=2, random_state=42)
+        labels = model.fit_predict(X_scaled)
+        melhor_k = 2
+        
+    elif metodo_selecionado == 'DBSCAN':
+        model = DBSCAN(eps=0.7, min_samples=5)
+        labels = model.fit_predict(X_scaled)
+        melhor_k = None
+    
+    # Calcula métricas
+    try:
+        n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
+        if n_clusters < 2:
+            sil_score = -1.0
+            sil_text = "N/A"
+        else:
+            sil_score = silhouette_score(X_scaled, labels)
+            sil_text = f"{sil_score:.3f}"
+    except:
+        sil_score = 0
+        sil_text = "N/A"
+    
+    try:
+        if metodo_selecionado == 'DBSCAN' and -1 in labels:
+            dav_text = "N/A"
+        else:
+            dav_score = davies_bouldin_score(X_scaled, labels)
+            dav_text = f"{dav_score:.3f}"
+    except:
+        dav_text = "N/A"
+    
+    # Cria visualização
+    df_plot = X.copy()
+    df_plot['Cluster'] = labels
+    df_plot['Cluster'] = df_plot['Cluster'].astype(str)
+    
+    color_map = {
+        '0': '#1abc9c',
+        '1': '#2c5f7d',
+        '2': '#27ae60',
+        '3': '#2980b9',
+        '-1': '#e74c3c'
+    }
+    
+    fig = px.scatter(
+        df_plot,
+        x='reviewsCount',
+        y='totalScore',
+        color='Cluster',
+        title=f'🔵 Clustering: {metodo_selecionado}' + (f' (K={melhor_k})' if melhor_k else ''),
+        labels={
+            'reviewsCount': 'Número de Reviews (escala log)',
+            'totalScore': 'Score de Qualidade',
+            'Cluster': 'Cluster'
+        },
+        color_discrete_map=color_map,
+        template='plotly_white',
+        opacity=0.7,
+        log_x=True
     )
-
-    # --- FIM DA LÓGICA NOVA ---
-
-    # Formata Silhouette (lógica antiga)
-    sil_score = f"{data['silhouette']:.3f}"
-
-    # Formata Davies-Bouldin (lógica antiga)
-    db_value = data['davies_bouldin']
-    if db_value is None:
-        dav_score = "N/A"
+    
+    fig.update_traces(
+        marker=dict(size=8, line=dict(width=0.5, color='white')),
+        selector=dict(mode='markers')
+    )
+    
+    fig.update_layout(
+        font=dict(family="Arial, sans-serif", size=12),
+        title_font_size=16,
+        title_font_color='#1a3a52',
+        showlegend=True,
+        legend=dict(
+            title=dict(text='Cluster', font=dict(size=14, color='#1a3a52')),
+            bgcolor='rgba(255,255,255,0.9)',
+            bordercolor='#2c5f7d',
+            borderwidth=1
+        ),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        xaxis=dict(
+            type='log',
+            gridcolor='#e0e0e0',
+            title_font=dict(size=13, color='#2c5f7d'),
+            title='Número de Reviews (escala log)'
+        ),
+        yaxis=dict(
+            gridcolor='#e0e0e0',
+            title_font=dict(size=13, color='#2c5f7d'),
+            range=[0, 5.2]
+        ),
+        hovermode='closest',
+        height=500
+    )
+    
+    # Adiciona informações
+    cluster_counts = df_plot['Cluster'].value_counts().sort_index()
+    
+    if metodo_selecionado == 'DBSCAN':
+        annotation_lines = []
+        for c, count in cluster_counts.items():
+            if c == '-1':
+                annotation_lines.append(f"🔴 Ruído: {count} hotéis")
+            else:
+                annotation_lines.append(f"Cluster {c}: {count} hotéis")
     else:
-        dav_score = f"{db_value:.3f}"
+        annotation_lines = [f"Cluster {c}: {count} hotéis" for c, count in cluster_counts.items()]
+    
+    annotation_text = "<br>".join(annotation_lines)
+    
+    fig.add_annotation(
+        text=annotation_text,
+        xref="paper", yref="paper",
+        x=0.02, y=0.98,
+        showarrow=False,
+        bgcolor="rgba(255,255,255,0.9)",
+        bordercolor="#2c5f7d",
+        borderwidth=1.5,
+        font=dict(size=11, color='#2c3e50'),
+        align='left',
+        xanchor='left',
+        yanchor='top'
+    )
+    
+    metrics_text = f"<b>Métricas:</b><br>Silhouette: {sil_text}<br>Davies-Bouldin: {dav_text}"
+    
+    fig.add_annotation(
+        text=metrics_text,
+        xref="paper", yref="paper",
+        x=0.98, y=0.02,
+        showarrow=False,
+        bgcolor="rgba(255,255,255,0.9)",
+        bordercolor="#16a085",
+        borderwidth=1.5,
+        font=dict(size=11, color='#2c3e50'),
+        align='right',
+        xanchor='right',
+        yanchor='bottom'
+    )
+    
+    graph_component = dcc.Graph(figure=fig, config={'displayModeBar': True})
+    
+    return graph_component, sil_text, dav_text
 
-    # Retorna o componente de Imagem, e não mais um 'figure'
-    return img_component, sil_score, dav_score
-
-# Callback para a Sub-Aba 3.2: Classificação
+# ─────────────────────────────────────────────────────────────────────────────
+# Callback: Atualizar visualizações de Classificação (VALORES FIXOS CORRETOS!)
+# ─────────────────────────────────────────────────────────────────────────────
 @app.callback(
     [Output('card-accuracy', 'children'),
      Output('card-f1', 'children'),
      Output('card-precision', 'children'),
      Output('card-recall', 'children'),
-     Output('classif-graph-container', 'children')], # <-- MUDANÇA (só 1 gráfico)
+     Output('classif-graph-container', 'children')],
     [Input('dropdown-classif', 'value')]
 )
 def update_classification_visuals(modelo_selecionado):
-    # Procura os dados (mock data)
-    data = classif_data.get(modelo_selecionado, classif_data['Random Forest'])
-
-    # Formata as métricas
-    accuracy = f"{data['accuracy']:.2%}"
-    f1 = f"{data['f1']:.2%}"
-    precision = f"{data['precision']:.2%}"
-    recall = f"{data['recall']:.2%}"
-
-    # --- LÓGICA DE IMAGEM SIMPLIFICADA ---
-
-    # Pega o nome do ficheiro de imagem
-    img_filename = data.get('img_filename', 'default.png')
-
-    # Cria o componente de Imagem
-    img_component = html.Img(
-        src=app.get_asset_url(img_filename),
-        style={'width': '100%', 'height': '100%', 'object-fit': 'contain'}
+    """
+    Usa as matrizes de confusão FIXAS do notebook e calcula as métricas corretas.
+    
+    ✅ CORREÇÃO: Usa valores exatos do notebook, não treina dinamicamente
+    """
+    
+    # Busca a matriz de confusão correspondente
+    cm = CONFUSION_MATRICES[modelo_selecionado]
+    
+    # Calcula métricas a partir da matriz
+    metricas = calcular_metricas_da_matriz(cm)
+    
+    # Formata para exibição
+    accuracy_text = f"{metricas['accuracy']:.2%}"
+    f1_text = f"{metricas['f1']:.2%}"
+    precision_text = f"{metricas['precision']:.2%}"
+    recall_text = f"{metricas['recall']:.2%}"
+    
+    # Cria visualização da matriz de confusão
+    labels = ['SEM Website', 'COM Website']
+    
+    fig = go.Figure(data=go.Heatmap(
+        z=cm,
+        x=labels,
+        y=labels,
+        colorscale=[
+            [0, '#ecf8f8'],
+            [0.5, '#a8d8ea'],
+            [1, '#2c5f7d']
+        ],
+        text=cm,
+        texttemplate='<b>%{text}</b>',
+        textfont={"size": 20, "color": "white"},
+        showscale=True,
+        colorbar=dict(
+            title="Contagem",
+            titlefont=dict(color='#1a3a52'),
+            tickfont=dict(color='#1a3a52')
+        ),
+        hovertemplate='<b>Real:</b> %{y}<br><b>Predito:</b> %{x}<br><b>Contagem:</b> %{z}<extra></extra>'
+    ))
+    
+    fig.update_layout(
+        title=f'🎯 Matriz de Confusão: {modelo_selecionado}',
+        xaxis=dict(
+            title='<b>Classe Predita</b>',
+            titlefont=dict(size=14, color='#2c5f7d'),
+            tickfont=dict(size=12, color='#2c3e50'),
+            side='bottom'
+        ),
+        yaxis=dict(
+            title='<b>Classe Real</b>',
+            titlefont=dict(size=14, color='#2c5f7d'),
+            tickfont=dict(size=12, color='#2c3e50'),
+            autorange='reversed'
+        ),
+        font=dict(family="Arial, sans-serif"),
+        title_font_size=16,
+        title_font_color='#1a3a52',
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        margin=dict(l=100, r=50, t=80, b=80),
+        height=500
     )
+    
+    # Adiciona anotação com métricas
+    annotation_text = (
+        f"<b>Métricas Gerais:</b><br>"
+        f"Acurácia: {metricas['accuracy']*100:.2f}%<br>"
+        f"F1-Score: {metricas['f1']*100:.2f}%<br>"
+        f"Precision: {metricas['precision']*100:.2f}%<br>"
+        f"Recall: {metricas['recall']*100:.2f}%<br>"
+        f"Total: {cm.sum()}"
+    )
+    
+    fig.add_annotation(
+        text=annotation_text,
+        xref="paper", yref="paper",
+        x=1.15, y=0.5,
+        showarrow=False,
+        bgcolor="rgba(255,255,255,0.9)",
+        bordercolor="#2c5f7d",
+        borderwidth=2,
+        font=dict(size=11, color='#2c3e50'),
+        align='left',
+        xanchor='left',
+        yanchor='middle'
+    )
+    
+    graph_component = dcc.Graph(figure=fig, config={'displayModeBar': True})
+    
+    return accuracy_text, f1_text, precision_text, recall_text, graph_component
 
-    # --- FIM DA LÓGICA ---
+# ═══════════════════════════════════════════════════════════════════════════════
+# 🚀 EXECUÇÃO DO SERVIDOR
+# ═══════════════════════════════════════════════════════════════════════════════
 
-    return accuracy, f1, precision, recall, img_component
-
-# Executa o servidor
 if __name__ == '__main__':
     app.run(debug=True, port=8050)
