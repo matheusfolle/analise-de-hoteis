@@ -6,7 +6,7 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 
 import dash
-import dash_table
+from dash import dash_table
 from dash.dash_table.Format import Format
 from dash import dcc, html, Input, Output, dash_table
 import dash_bootstrap_components as dbc
