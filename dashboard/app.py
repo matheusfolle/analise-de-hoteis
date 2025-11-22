@@ -1382,5 +1382,7 @@ def update_classification_visuals(modelo_selecionado):
 # 🚀 EXECUÇÃO DO SERVIDOR
 # ═══════════════════════════════════════════════════════════════════════════════
 
+server = app.server  # Para Gunicorn (produção)
+
 if __name__ == '__main__':
-    app.run(debug=True, port=8050)
+    app.run_server(debug=True, port=8050)  # Desenvolvimento local
