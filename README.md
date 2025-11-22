@@ -33,7 +33,7 @@ Através de uma pipeline rigorosa de 3 fases, descobrimos insights surpreendente
 
 ---
 
-## 🔬 A Pipeline de Análise (3 Fases)
+## 🔬 As 3 Fases da Pipeline de Análise
 
 ### **Fase 1: Estatística Descritiva**
 Análise exploratória confirmou que presença digital está fortemente associada a performance superior:
