@@ -186,7 +186,7 @@ Este projeto aplica diversos conceitos estatísticos fundamentais.
 
 - **Paper Completo:** 
   - [📥 Download (GitHub)](papers/report.docx)
-  - [👁️ Visualizar Online (Google Drive)](https://docs.google.com/document/d/1yF0LLgoXG5mhQX6iK87u-eplGPT9UDQD/edit?usp=drive_link&ouid=102355191132643804552&rtpof=true&sd=true)
+  - [👁️ Visualizar Online (Google Drive)](https://drive.google.com/drive/folders/1PbojVSuwE0nTp28_uNFAwq9lx1a0vWn2?hl=pt-br)
 
 - **Slides da Apresentação:** [Acessar no Canva](https://www.canva.com/design/DAG4dOYjrAI/Mh7PE6JILAYBYoSbdRNeDg/edit)
 
