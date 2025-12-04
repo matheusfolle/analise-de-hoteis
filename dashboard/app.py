@@ -237,7 +237,8 @@ fig_classif_comparativo.update_layout(
 # Adiciona Google Fonts ao app
 external_stylesheets = [
     dbc.themes.YETI,
-    'https://fonts.googleapis.com/css2?family=Oswald:wght@500&display=swap'
+    'https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap',
+    'https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap'
 ]
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets, suppress_callback_exceptions=True)
@@ -280,7 +281,7 @@ TABLE_STYLE = {
     },
     'style_cell': {
         'textAlign': 'left',
-        'fontFamily': 'Arial, sans-serif',
+        'fontFamily': '"Open Sans", sans-serif',
         'fontSize': '13px',
         'padding': '14px',
         'border': '1px solid #e0e0e0',
@@ -328,7 +329,7 @@ layout_descritiva = html.Div([
         dbc.CardBody([
             html.Div([
                 html.H4("A Descoberta", className="mb-3", style={
-                    'fontFamily': "'Oswald', sans-serif",
+                    'fontFamily': "'Playfair Display', serif",
                     'fontWeight': '700',
                     'color': 'white',
                     'letterSpacing': '1px'
@@ -506,8 +507,8 @@ layout_regressao = html.Div([
         dbc.CardBody([
             html.Div([
                 html.H4("O Desafio", className="mb-3", style={
-                    'fontFamily': "'Oswald', sans-serif",
-                    'fontWeight': '500',
+                    'fontFamily': "'Playfair Display', serif",
+                    'fontWeight': '700',
                     'color': 'white',
                     'letterSpacing': '1px'
                 }),
@@ -813,8 +814,8 @@ layout_ml = html.Div([
         dbc.CardBody([
             html.Div([
                 html.H4("A Solução", className="mb-3", style={
-                    'fontFamily': "'Oswald', sans-serif",
-                    'fontWeight': '500',
+                    'fontFamily': "'Playfair Display', serif",
+                    'fontWeight': '700',
                     'color': 'white',
                     'letterSpacing': '1px'
                 }),
@@ -845,8 +846,8 @@ app.layout = dbc.Container([
         html.H1([
             "Ciência de Dados em Hotéis"
         ], className="text-center my-4", style={
-            'fontFamily': "'Oswald', sans-serif",
-            'fontWeight': '500',
+            'fontFamily': "'Playfair Display', serif",
+            'fontWeight': '800',
             'fontSize': '48px',
             'textShadow': '2px 2px 4px rgba(0,0,0,0.1)',
             'letterSpacing': '2px',
