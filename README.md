@@ -14,7 +14,7 @@
 
 ---
 
-## 📖 Sobre o Projeto
+## Sobre o Projeto
 
 Este projeto de Data Science analisa a complexa relação entre:
 - **Presença Digital** (`has_website`)
