@@ -25,7 +25,7 @@ Através de uma pipeline rigorosa de 3 fases, descobrimos insights surpreendente
 
 ---
 
-## 🎯 Questões-Chave
+## Questões-Chave
 
 1. Ter um website correlaciona com mais avaliações e notas superiores?
 2. A popularidade de um hotel (nº de reviews) pode prever sua qualidade (score)?
@@ -33,7 +33,7 @@ Através de uma pipeline rigorosa de 3 fases, descobrimos insights surpreendente
 
 ---
 
-## 🔬 As 3 Fases da Pipeline de Análise
+## As 3 Fases da Pipeline de Análise
 
 ### **Fase 1: Estatística Descritiva**
 Análise exploratória confirmou que presença digital está fortemente associada a performance superior:
@@ -83,7 +83,7 @@ Usamos `totalScore` + `reviewsCount` como features para prever `has_website`.
 
 ---
 
-## 🏆 Resultado Final
+## Resultado Final
 ```
 Modelo Vencedor: Decision Tree
 Acurácia: 76,30%
@@ -167,7 +167,7 @@ O dashboard estará disponível em `http://localhost:8050`
 
 ---
 
-## 📊 Infográfico - Fundamentos Estatísticos
+## Infográfico - Fundamentos Estatísticos
 
 Este projeto aplica diversos conceitos estatísticos fundamentais.
 
@@ -182,7 +182,7 @@ Este projeto aplica diversos conceitos estatísticos fundamentais.
 
 ---
 
-## 📚 Materiais do Projeto
+## Materiais do Projeto
 
 - **Paper Completo:** 
   - [📥 Download (GitHub)](papers/report.docx)
@@ -194,7 +194,7 @@ Este projeto aplica diversos conceitos estatísticos fundamentais.
 
 ---
 
-## 🎓 Contexto Acadêmico
+## Contexto Acadêmico
 
 **Instituição:** Universidade Positivo  
 **Curso:** Análise e Desenvolvimento de Sistemas  
@@ -204,7 +204,7 @@ Este projeto aplica diversos conceitos estatísticos fundamentais.
 
 ---
 
-## 📝 Licença
+## Licença
 
 Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
 
