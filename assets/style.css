@@ -1,0 +1,238 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOBILE-FIRST CSS - DASHBOARD HOTÉIS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Reset e base */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+}
+
+/* Container principal */
+.container-fluid {
+    padding: 15px !important;
+}
+
+/* Títulos responsivos */
+h1 {
+    font-size: clamp(24px, 5vw, 48px) !important;
+    line-height: 1.2 !important;
+    margin-bottom: 15px !important;
+}
+
+h4, h5 {
+    font-size: clamp(16px, 3vw, 20px) !important;
+}
+
+h6 {
+    font-size: clamp(11px, 2.5vw, 13px) !important;
+}
+
+/* Cards responsivos */
+.card {
+    margin-bottom: 15px;
+}
+
+.card-body {
+    padding: 15px !important;
+}
+
+/* Gráficos Plotly */
+.js-plotly-plot {
+    width: 100% !important;
+}
+
+.plotly {
+    width: 100% !important;
+}
+
+/* Tabelas responsivas */
+.dash-table-container {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+}
+
+.dash-spreadsheet-container {
+    max-width: 100% !important;
+}
+
+/* Dropdowns */
+.Select-control {
+    min-height: 44px !important; /* Touch-friendly */
+}
+
+/* Tabs responsivas */
+.tab {
+    font-size: 12px !important;
+    padding: 10px 8px !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BREAKPOINTS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Mobile Portrait (até 576px) */
+@media (max-width: 576px) {
+    /* Container mais apertado */
+    .container-fluid {
+        padding: 10px !important;
+    }
+    
+    /* Colunas viram fullwidth */
+    .row > div[class*='col'] {
+        width: 100% !important;
+        max-width: 100% !important;
+        flex: 0 0 100% !important;
+        margin-bottom: 15px;
+    }
+    
+    /* Cards de métricas menores */
+    .card-body h2 {
+        font-size: 28px !important;
+    }
+    
+    .card-body h6 {
+        font-size: 11px !important;
+    }
+    
+    /* Gráficos altura fixa */
+    .js-plotly-plot {
+        height: 350px !important;
+        min-height: 350px !important;
+    }
+    
+    /* Tabelas scroll horizontal */
+    .dash-table-container {
+        font-size: 11px !important;
+    }
+    
+    /* Tabs menores */
+    .tab {
+        font-size: 11px !important;
+        padding: 8px 5px !important;
+    }
+    
+    /* Espaçamento entre seções */
+    hr {
+        margin: 20px 0 !important;
+    }
+}
+
+/* Mobile Landscape + Tablet (577px - 768px) */
+@media (min-width: 577px) and (max-width: 768px) {
+    /* 2 colunas para cards de métricas */
+    .row > div[class*='col-3'] {
+        width: 50% !important;
+        max-width: 50% !important;
+        flex: 0 0 50% !important;
+    }
+    
+    /* Gráficos lado a lado viram coluna */
+    .row > div[class*='col-6'] {
+        width: 100% !important;
+        max-width: 100% !important;
+        flex: 0 0 100% !important;
+        margin-bottom: 20px;
+    }
+    
+    .js-plotly-plot {
+        height: 400px !important;
+    }
+}
+
+/* Tablet Portrait (769px - 991px) */
+@media (min-width: 769px) and (max-width: 991px) {
+    /* 4 colunas para métricas */
+    .row > div[class*='col-3'] {
+        width: 25% !important;
+        flex: 0 0 25% !important;
+    }
+    
+    /* Gráficos em linha */
+    .row > div[class*='col-6'] {
+        width: 50% !important;
+        flex: 0 0 50% !important;
+    }
+    
+    .js-plotly-plot {
+        height: 450px !important;
+    }
+}
+
+/* Desktop (992px+) */
+@media (min-width: 992px) {
+    .container-fluid {
+        padding: 30px !important;
+    }
+    
+    .js-plotly-plot {
+        height: 500px !important;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   AJUSTES ESPECÍFICOS PLOTLY
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Botões do modebar menores em mobile */
+@media (max-width: 576px) {
+    .modebar {
+        transform: scale(0.8);
+        transform-origin: top right;
+    }
+    
+    .modebar-btn {
+        width: 28px !important;
+        height: 28px !important;
+    }
+}
+
+/* Legend responsiva */
+.legend {
+    max-width: 200px !important;
+}
+
+@media (max-width: 576px) {
+    .legend {
+        font-size: 10px !important;
+        max-width: 150px !important;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ACESSIBILIDADE & UX
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Touch targets mínimos (44x44px) */
+button, 
+.btn,
+.Select-control,
+.tab {
+    min-height: 44px !important;
+    min-width: 44px !important;
+}
+
+/* Scroll suave */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Focus visível para acessibilidade */
+*:focus {
+    outline: 2px solid #2c5f7d;
+    outline-offset: 2px;
+}
+
+/* Prevent zoom on input focus (iOS) */
+@media (max-width: 576px) {
+    input,
+    select,
+    textarea {
+        font-size: 16px !important;
+    }
+}
