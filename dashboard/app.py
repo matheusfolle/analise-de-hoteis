@@ -389,7 +389,7 @@ layout_descritiva = html.Div([
                 dbc.CardBody(
                     html.H5(
                         "Nota Metodológica: Seguindo o padrão do Google Hotels e TripAdvisor (escalas de rating 1-5), "
-                        "todos os gráficos e métricas deste dashboard utilizam dados com filtro de outliers (score > 0.2).",
+                        "todos os gráficos e métricas deste dashboard utilizam dados com filtro de outliers (score > 0.2). A não ser as tabelas abaixo que trazem raw data vindo do excel.",
                         style={'textAlign': 'center', 'fontSize': '15px', 'fontWeight': '300', 'color': 'black'}
                     )
                 )
