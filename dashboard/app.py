@@ -759,7 +759,7 @@ app.layout = dbc.Container([
     
     html.Div([
         html.Hr(style={'borderTop': '2px solid #d4f1f4'}),
-        html.P("2024 Dashboard de Hotéis | Powered by Dash & Plotly",
+        html.P("2024 Dashboard de Hotéis | Powered by Matheus Folle",
               className="text-center", style={'fontSize': '13px', 'color': '#2c5f7d'})
     ])
 ], fluid=True, style={'backgroundColor': '#ecf8f8', 'minHeight': '100vh', 'padding': '30px'})
