@@ -31,11 +31,31 @@ from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_sc
 # CARREGAMENTO E PREPARAÇÃO DOS DADOS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# Carrega o dataset principal
+import os
+
+# Detecta onde o arquivo está
+CAMINHOS_POSSIVEIS = [
+    "../data/raw/data-hoteis-atualizado.xlsx",  # Local (estrutura normal)
+    "data-hoteis-atualizado.xlsx",               # Railway (arquivo copiado)
+    "./data/raw/data-hoteis-atualizado.xlsx"    # Alternativa
+]
+
+# Procura o arquivo
+DATASET_PATH = None
+for caminho in CAMINHOS_POSSIVEIS:
+    if os.path.exists(caminho):
+        DATASET_PATH = caminho
+        break
+
+# Carrega o dataset
 try:
-    df_bruto = pd.read_excel("../data/raw/data-hoteis-atualizado.xlsx")
-except FileNotFoundError:
-    print("ERRO: Arquivo '../data/raw/data-hoteis-atualizado.xlsx' não encontrado.")
+    if DATASET_PATH:
+        df_bruto = pd.read_excel(DATASET_PATH)
+        print(f"Dataset carregado de: {DATASET_PATH}")
+    else:
+        raise FileNotFoundError("Dataset não encontrado em nenhum caminho")
+except FileNotFoundError as e:
+    print(f"ERRO: {e}")
     df_bruto = pd.DataFrame({'totalScore': [], 'reviewsCount': [], 'has_website': []})
 
 # Aplica filtro principal (para Abas 2 e 3)
@@ -330,7 +350,7 @@ layout_descritiva = html.Div([
             html.Div([
                 html.H4("A Descoberta", className="mb-3", style={
                     'fontFamily': "'Playfair Display', serif",
-                    'fontWeight': '700',
+                    'fontWeight': '800',
                     'color': 'white',
                     'letterSpacing': '1px'
                 }),
@@ -508,7 +528,7 @@ layout_regressao = html.Div([
             html.Div([
                 html.H4("O Desafio", className="mb-3", style={
                     'fontFamily': "'Playfair Display', serif",
-                    'fontWeight': '700',
+                    'fontWeight': '800',
                     'color': 'white',
                     'letterSpacing': '1px'
                 }),
@@ -815,7 +835,7 @@ layout_ml = html.Div([
             html.Div([
                 html.H4("A Solução", className="mb-3", style={
                     'fontFamily': "'Playfair Display', serif",
-                    'fontWeight': '700',
+                    'fontWeight': '800',
                     'color': 'white',
                     'letterSpacing': '1px'
                 }),
